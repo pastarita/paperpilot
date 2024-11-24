@@ -1,46 +1,108 @@
-// Debug utilities for PaperPilot extension
-export const DEBUG = {
+/**
+ * Debug configuration and utility functions
+ */
+
+// Debug levels
+export enum DebugLevel {
+  ERROR = 0,
+  WARN = 1,
+  INFO = 2,
+  DEBUG = 3,
+  TRACE = 4
+}
+
+interface DebugConfig {
+  enabled: boolean;
+  level: DebugLevel;
+  prefix: string;
+}
+
+// Default configuration
+const config: DebugConfig = {
   enabled: true,
-  logLevel: 'debug' as const,
-  
-  log: (message: string, data?: unknown) => {
-    if (!DEBUG.enabled) return;
-    console.log(`[PaperPilot] ${message}`, data || '');
-  },
-
-  error: (message: string, error?: unknown) => {
-    if (!DEBUG.enabled) return;
-    console.error(`[PaperPilot Error] ${message}`, error || '');
-  },
-
-  trace: (message: string) => {
-    if (!DEBUG.enabled) return;
-    console.trace(`[PaperPilot Trace] ${message}`);
-  }
+  level: DebugLevel.INFO,
+  prefix: '[PaperPilot]'
 };
 
-// Inject debug panel into page
-export function injectDebugPanel() {
-  if (!DEBUG.enabled) return;
+/**
+ * Log a debug message
+ */
+export function debug(...args: any[]) {
+  if (!config.enabled || config.level < DebugLevel.DEBUG) return;
+  console.debug(config.prefix, ...args);
+}
 
-  const panel = document.createElement('div');
-  panel.id = 'paperpilot-debug';
-  panel.style.cssText = `
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 300px;
-    height: auto;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 10px;
-    font-family: monospace;
-    font-size: 12px;
-    z-index: 10000;
-    overflow: auto;
-    max-height: 50vh;
-  `;
+/**
+ * Log an info message
+ */
+export function info(...args: any[]) {
+  if (!config.enabled || config.level < DebugLevel.INFO) return;
+  console.info(config.prefix, ...args);
+}
 
-  document.body.appendChild(panel);
-  return panel;
-} 
+/**
+ * Log a warning message
+ */
+export function warn(...args: any[]) {
+  if (!config.enabled || config.level < DebugLevel.WARN) return;
+  console.warn(config.prefix, ...args);
+}
+
+/**
+ * Log an error message
+ */
+export function error(...args: any[]) {
+  if (!config.enabled || config.level < DebugLevel.ERROR) return;
+  console.error(config.prefix, ...args);
+}
+
+/**
+ * Log a trace message
+ */
+export function trace(...args: any[]) {
+  if (!config.enabled || config.level < DebugLevel.TRACE) return;
+  console.trace(config.prefix, ...args);
+}
+
+/**
+ * Configure debug settings
+ */
+export function configure(options: Partial<DebugConfig>) {
+  Object.assign(config, options);
+}
+
+/**
+ * Enable or disable debugging
+ */
+export function setEnabled(enabled: boolean) {
+  config.enabled = enabled;
+}
+
+/**
+ * Set debug level
+ */
+export function setLevel(level: DebugLevel) {
+  config.level = level;
+}
+
+/**
+ * Set debug prefix
+ */
+export function setPrefix(prefix: string) {
+  config.prefix = prefix;
+}
+
+// Export debug configuration
+export const DEBUG = {
+  config,
+  debug,
+  info,
+  warn,
+  error,
+  trace,
+  configure,
+  setEnabled,
+  setLevel,
+  setPrefix,
+  DebugLevel
+};

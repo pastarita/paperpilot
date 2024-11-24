@@ -17,9 +17,10 @@ module.exports = {
             loader: 'ts-loader',
             options: {
               configFile: 'tsconfig.extension.json',
-              transpileOnly: true,
+              transpileOnly: false, // Enable type checking
               compilerOptions: {
-                module: 'commonjs'
+                module: 'es2020',
+                target: 'es2020'
               }
             }
           }
@@ -51,30 +52,22 @@ module.exports = {
   plugins: [
     new CopyPlugin({
       patterns: [
+        { from: 'manifest.json' },
+        { from: 'public', to: '.' },
+        { from: 'src/styles', to: '.' },
         { 
-          from: "public/icons/*.png",
-          to: "icons/[name][ext]"
+          from: 'node_modules/pdfjs-dist/build/pdf.worker.mjs',
+          to: 'pdf.worker.min.js'
         },
+        { from: 'node_modules/pdfjs-dist/cmaps', to: 'cmaps' },
         { 
-          from: "manifest.json",
-          to: "manifest.json"
-        },
-        { 
-          from: "src/styles/styles.css", 
-          to: "styles.css",
-          noErrorOnMissing: true
-        },
-        {
-          from: path.join(__dirname, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.js'),
-          to: 'pdf.worker.min.js',
-          noErrorOnMissing: true
-        },
-        {
-          from: path.join(__dirname, 'node_modules', 'pdfjs-dist', 'build', 'pdf.worker.mjs'),
-          to: 'pdf.worker.min.js',
-          noErrorOnMissing: true
+          from: 'node_modules/pdfjs-dist/standard_fonts',
+          to: 'standard_fonts'
         }
-      ],
-    }),
-  ]
-}; 
+      ]
+    })
+  ],
+  optimization: {
+    minimize: false // Disable minification for better debugging
+  }
+};

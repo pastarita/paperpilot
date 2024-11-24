@@ -1,93 +1,115 @@
 /// <reference types="chrome"/>
 
-import { DEBUG, injectDebugPanel } from './debug/debug';
 import { PDFService } from './services/PDFService';
 import { KeywordService } from './services/KeywordService';
 import { KeywordStore } from './store/KeywordStore';
+import { KeywordList } from './components/KeywordList';
+import { debug } from './debug/debug';
 
 // Initialize services
-const store = new KeywordStore();
-const keywordService = new KeywordService(store);
 const pdfService = new PDFService();
+const keywordService = new KeywordService();
+const keywordStore = new KeywordStore();
+const keywordList = new KeywordList();
 
-// Debug panel for development
-let debugPanel: HTMLElement | null | undefined = null;
+// Debug panel element
+let debugPanel: HTMLElement | null = null;
 
-interface ChromeMessage {
-  type: string;
-  url: string;
+// Function to create and append debug panel
+function createDebugPanel() {
+  if (debugPanel) return;
+
+  debugPanel = document.createElement('div');
+  debugPanel.id = 'paperpilot-debug-panel';
+  debugPanel.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    z-index: 9999;
+  `;
+
+  const toggleButton = document.createElement('button');
+  toggleButton.textContent = 'Show Keywords';
+  toggleButton.onclick = () => {
+    keywordList.toggleVisibility();
+  };
+
+  debugPanel.appendChild(toggleButton);
+  document.body.appendChild(debugPanel);
 }
 
-async function initialize() {
-  try {
-    DEBUG.log('Initializing PaperPilot...');
-    
-    // Initialize debug panel in development
-    if (process.env.NODE_ENV === 'development') {
-      debugPanel = injectDebugPanel();
-      updateDebugInfo('Initializing...');
-    }
-
-    // Initialize PDF service with worker URL
-    const workerUrl = chrome.runtime.getURL('pdf.worker.min.js');
-    DEBUG.log('PDF.js worker URL:', workerUrl);
-    await pdfService.init(workerUrl);
-
-    // Listen for PDF loads
-    chrome.runtime.onMessage.addListener(async (
-      message: ChromeMessage
-    ) => {
-      if (message.type === 'PDF_LOADED') {
-        DEBUG.log('PDF detected, processing...', message.url);
-        await processPDF(message.url);
-      }
-    });
-
-    DEBUG.log('PaperPilot initialized successfully');
-  } catch (error) {
-    DEBUG.error('Initialization failed', error);
-  }
-}
-
+// Process PDF and extract keywords
 async function processPDF(url: string) {
   try {
-    updateDebugInfo('Processing PDF...');
-    
-    // Parse PDF
-    const pdfContent = await pdfService.parsePDF(url);
-    DEBUG.log('PDF parsed successfully', { 
-      pages: pdfContent.pages.length,
-      title: pdfContent.title 
-    });
+    debug('Processing PDF:', url);
 
-    // Process keywords
-    const keywords = await keywordService.processDocument(pdfContent.text);
-    DEBUG.log('Keywords extracted', keywords);
+    // Extract text from PDF
+    const text = await pdfService.extractText(url);
+    if (!text) {
+      debug('No text extracted from PDF');
+      return;
+    }
 
-    // Highlight keywords
-    keywordService.highlightKeywords(document.body);
-    DEBUG.log('Keywords highlighted');
+    // Extract keywords
+    const keywords = await keywordService.extractKeywords(text);
+    if (!keywords || keywords.length === 0) {
+      debug('No keywords extracted');
+      return;
+    }
 
-    updateDebugInfo('PDF processed successfully', {
-      keywords: keywords.length,
-      pages: pdfContent.pages.length
-    });
-  } catch (error) {
-    DEBUG.error('PDF processing failed', error);
-    updateDebugInfo('Error processing PDF', { error });
+    // Store keywords
+    keywordStore.setKeywords(keywords);
+
+    // Update UI
+    keywordList.updateKeywords(keywords);
+
+    debug('Keywords extracted:', keywords);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      debug('Error processing PDF:', error.message);
+    } else {
+      debug('Unknown error processing PDF');
+    }
   }
 }
 
-function updateDebugInfo(status: string, data?: Record<string, unknown>) {
-  if (!debugPanel) return;
-  
-  debugPanel.innerHTML = `
-    <div style="margin-bottom: 10px;">
-      <strong>Status:</strong> ${status}
-    </div>
-    ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
-  `;
-}
+// Listen for messages from background script
+chrome.runtime.onMessage.addListener((message: { type: string; url?: string }, sender, sendResponse) => {
+  debug('Received message:', message);
 
-// Initialize on content script load
-initialize(); 
+  switch (message.type) {
+    case 'PING':
+      debug('Received PING');
+      sendResponse({ status: 'alive' });
+      break;
+
+    case 'PDF_LOADED':
+      if (message.url) {
+        debug('PDF loaded:', message.url);
+        createDebugPanel();
+        processPDF(message.url).catch((error: unknown) => {
+          if (error instanceof Error) {
+            debug('Error in PDF_LOADED handler:', error.message);
+          } else {
+            debug('Unknown error in PDF_LOADED handler');
+          }
+        });
+      }
+      break;
+
+    case 'TOGGLE_KEYWORDS':
+      debug('Toggling keywords panel');
+      keywordList.toggleVisibility();
+      break;
+
+    default:
+      debug('Unknown message type:', message.type);
+  }
+
+  // Return true to indicate async response
+  return true;
+});

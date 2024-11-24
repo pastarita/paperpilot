@@ -1,45 +1,22 @@
-import { TextItem, PDFDocumentProxy } from 'pdfjs-dist/types/src/display/api';
+import * as pdfjsLib from 'pdfjs-dist';
 import { DEBUG } from '../debug/debug';
-import { getDocument, initializePDFJS } from '../config/pdf.config';
 
 interface PDFPage {
   pageNumber: number;
   content: string;
-  items: TextItem[];
+  items: any[];
 }
 
 interface PDFContent {
   text: string;
   pages: PDFPage[];
   title?: string;
-  metadata?: Record<string, unknown>;
-}
-
-interface TextLocation {
-  pageNumber: number;
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-// Add interface for PDF metadata info
-interface PDFMetadataInfo {
-  Title?: string;
-  Author?: string;
-  Subject?: string;
-  Keywords?: string;
-  Creator?: string;
-  Producer?: string;
-  CreationDate?: string;
-  ModificationDate?: string;
-  [key: string]: unknown;
+  metadata?: any;
 }
 
 export class PDFService {
-  private document?: PDFDocumentProxy;
   private initialized: boolean = false;
+  private document: pdfjsLib.PDFDocumentProxy | null = null;
 
   constructor() {
     // Don't initialize in constructor - wait for init() call
@@ -50,22 +27,38 @@ export class PDFService {
       return;
     }
 
-    if (typeof window !== 'undefined' && 'Worker' in window) {
-      try {
-        DEBUG.log('Initializing PDF.js worker with URL:', workerUrl);
-        const success = initializePDFJS(workerUrl);
-        
-        if (!success) {
-          throw new Error('Failed to initialize PDF.js worker options');
-        }
-        
-        this.initialized = true;
-      } catch (error) {
-        DEBUG.error('Failed to initialize PDF.js worker:', error);
-        throw new Error('Failed to initialize PDF.js worker');
+    try {
+      DEBUG.log('Initializing PDF.js worker with URL:', workerUrl);
+
+      // Ensure worker URL is valid
+      if (!workerUrl) {
+        throw new Error('Worker URL is required');
       }
-    } else {
-      throw new Error('Web Workers not supported in this environment');
+
+      // Set worker source
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+
+      // Test worker initialization
+      const testPdf = new Uint8Array([
+        0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a
+      ]); // Empty PDF header
+
+      try {
+        await pdfjsLib.getDocument({ data: testPdf }).promise;
+        DEBUG.log('PDF.js worker test successful');
+      } catch (error) {
+        if (error.name === 'InvalidPDFException') {
+          // This is actually good - means worker is working but PDF is invalid
+          DEBUG.log('PDF.js worker initialized successfully');
+        } else {
+          throw error;
+        }
+      }
+
+      this.initialized = true;
+    } catch (error) {
+      DEBUG.error('Failed to initialize PDF.js worker:', error);
+      throw error;
     }
   }
 
@@ -76,14 +69,38 @@ export class PDFService {
 
     try {
       DEBUG.log('Starting PDF parse:', url);
-      
-      // Load the PDF document using the correct import
-      this.document = await getDocument(url).promise;
-      DEBUG.log('PDF document loaded, pages:', this.document.numPages);
+      let pdfData: string | ArrayBuffer = url;
 
-      // Get document metadata with proper typing
+      // Handle local files
+      if (url.startsWith('file://')) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          pdfData = await response.arrayBuffer();
+          DEBUG.log('Successfully loaded local PDF file');
+        } catch (error) {
+          DEBUG.error('Error loading local PDF:', error);
+          throw new Error(`Unable to load local PDF file: ${error.message}`);
+        }
+      }
+
+      // Load the PDF document with improved options
+      DEBUG.log('Creating PDF document with options');
+      const loadingTask = pdfjsLib.getDocument({
+        url: pdfData,
+        cMapUrl: chrome.runtime.getURL('cmaps/'),
+        cMapPacked: true,
+        standardFontDataUrl: chrome.runtime.getURL('standard_fonts/'),
+      });
+
+      this.document = await loadingTask.promise;
+      DEBUG.log('PDF document loaded successfully, pages:', this.document.numPages);
+
+      // Get document metadata
       const metadata = await this.document.getMetadata();
-      const info = metadata.info as PDFMetadataInfo;
+      const info = metadata.info;
 
       // Extract text from each page
       const pages: PDFPage[] = [];
@@ -94,7 +111,7 @@ export class PDFService {
         const textContent = await page.getTextContent();
         
         // Extract text items and their positions
-        const items = textContent.items as TextItem[];
+        const items = textContent.items;
         const pageText = items.map(item => item.str).join(' ');
         
         fullText += pageText + '\n';
@@ -103,6 +120,9 @@ export class PDFService {
           content: pageText,
           items: items
         });
+
+        // Clean up page object
+        page.cleanup();
       }
 
       return {
@@ -111,59 +131,52 @@ export class PDFService {
         title: info?.Title,
         metadata: info
       };
-
     } catch (error) {
       DEBUG.error('PDF parsing error:', error);
       throw error;
     }
   }
 
-  async getTextCoordinates(pdfUrl: string, searchText: string): Promise<TextLocation[]> {
-    const locations: TextLocation[] = [];
-    
+  /**
+   * Extract text content from a PDF file
+   */
+  async extractText(url: string): Promise<string> {
     try {
-      const doc = await getDocument(pdfUrl).promise;
-      
-      for (let i = 1; i <= doc.numPages; i++) {
-        const page = await doc.getPage(i);
+      DEBUG.log('Loading PDF:', url);
+
+      // Load the PDF document
+      const loadingTask = pdfjsLib.getDocument(url);
+      const pdf = await loadingTask.promise;
+
+      DEBUG.log('PDF loaded, extracting text...');
+
+      // Get all pages
+      const pages = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        const viewport = page.getViewport({ scale: 1.0 });
-        
-        // Find text matches and their coordinates
-        const items = textContent.items as TextItem[];
-        items.forEach((item) => {
-          if (item.str.includes(searchText)) {
-            const transform = viewport.transform;
-            const [x, y] = this.applyTransform([item.transform[4], item.transform[5]], transform);
-            
-            locations.push({
-              pageNumber: i,
-              text: item.str,
-              x: x,
-              y: y,
-              width: item.width,
-              height: item.height
-            });
-          }
-        });
+        const pageText = textContent.items
+          .map(item => 'str' in item ? item.str : '')
+          .join(' ');
+        pages.push(pageText);
       }
-    } catch (error) {
-      console.error('Error getting text coordinates:', error);
-    }
-    
-    return locations;
-  }
 
-  private applyTransform(point: number[], transform: number[]): number[] {
-    const x = transform[0] * point[0] + transform[2] * point[1] + transform[4];
-    const y = transform[1] * point[0] + transform[3] * point[1] + transform[5];
-    return [x, y];
-  }
+      // Get metadata
+      const metadata = await pdf.getMetadata();
+      const title = metadata.info?.Title || 'Untitled PDF';
 
-  destroy() {
-    if (this.document) {
-      this.document.destroy();
-      this.document = undefined;
+      DEBUG.log('PDF text extracted successfully');
+
+      // Return combined text
+      return pages.join('\n');
+
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        DEBUG.log('Error extracting PDF text:', error.message);
+      } else {
+        DEBUG.log('Unknown error extracting PDF text');
+      }
+      throw error;
     }
   }
 }

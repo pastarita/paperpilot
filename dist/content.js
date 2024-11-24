@@ -2,131 +2,118 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./src/config/pdf.config.ts":
-/*!**********************************!*\
-  !*** ./src/config/pdf.config.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ "./src/components/KeywordList.ts":
+/*!***************************************!*\
+  !*** ./src/components/KeywordList.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   KeywordList: () => (/* binding */ KeywordList)
+/* harmony export */ });
+/* harmony import */ var _debug_debug__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../debug/debug */ "./src/debug/debug.ts");
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.initializePDFJS = exports.getDocument = void 0;
-const pdfjs_dist_1 = __webpack_require__(/*! pdfjs-dist */ "./node_modules/pdfjs-dist/build/pdf.mjs");
-Object.defineProperty(exports, "getDocument", ({ enumerable: true, get: function () { return pdfjs_dist_1.getDocument; } }));
-// Initialize PDF.js
-const initializePDFJS = (workerUrl) => {
-    if (typeof window !== 'undefined' && 'Worker' in window) {
-        try {
-            // Set worker source
-            pdfjs_dist_1.GlobalWorkerOptions.workerSrc = workerUrl;
-            return true;
-        }
-        catch (error) {
-            console.error('Error initializing PDF.js worker options:', error);
-            return false;
-        }
+class KeywordList {
+    constructor() {
+        this.isVisible = false;
+        // Create container element
+        this.container = document.createElement('div');
+        this.container.id = 'paperpilot-keyword-list';
+        this.container.style.cssText = `
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 300px;
+      height: 100vh;
+      background: white;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+      transition: right 0.3s ease;
+      z-index: 9999;
+      overflow-y: auto;
+      padding: 20px;
+      font-family: system-ui, -apple-system, sans-serif;
+    `;
+        // Add to document
+        document.body.appendChild(this.container);
     }
-    return false;
-};
-exports.initializePDFJS = initializePDFJS;
-
-
-/***/ }),
-
-/***/ "./src/content.ts":
-/*!************************!*\
-  !*** ./src/content.ts ***!
-  \************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-/// <reference types="chrome"/>
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const debug_1 = __webpack_require__(/*! ./debug/debug */ "./src/debug/debug.ts");
-const PDFService_1 = __webpack_require__(/*! ./services/PDFService */ "./src/services/PDFService.ts");
-const KeywordService_1 = __webpack_require__(/*! ./services/KeywordService */ "./src/services/KeywordService.ts");
-const KeywordStore_1 = __webpack_require__(/*! ./store/KeywordStore */ "./src/store/KeywordStore.ts");
-// Initialize services
-const store = new KeywordStore_1.KeywordStore();
-const keywordService = new KeywordService_1.KeywordService(store);
-const pdfService = new PDFService_1.PDFService();
-// Debug panel for development
-let debugPanel = null;
-function initialize() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            debug_1.DEBUG.log('Initializing PaperPilot...');
-            // Initialize debug panel in development
-            if (true) {
-                debugPanel = (0, debug_1.injectDebugPanel)();
-                updateDebugInfo('Initializing...');
-            }
-            // Initialize PDF service with worker URL
-            const workerUrl = chrome.runtime.getURL('pdf.worker.min.js');
-            debug_1.DEBUG.log('PDF.js worker URL:', workerUrl);
-            yield pdfService.init(workerUrl);
-            // Listen for PDF loads
-            chrome.runtime.onMessage.addListener((message) => __awaiter(this, void 0, void 0, function* () {
-                if (message.type === 'PDF_LOADED') {
-                    debug_1.DEBUG.log('PDF detected, processing...', message.url);
-                    yield processPDF(message.url);
-                }
-            }));
-            debug_1.DEBUG.log('PaperPilot initialized successfully');
-        }
-        catch (error) {
-            debug_1.DEBUG.error('Initialization failed', error);
-        }
-    });
+    /**
+     * Update the keyword list with new keywords
+     */
+    updateKeywords(keywords) {
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Updating keyword list:', keywords);
+        // Clear existing content
+        this.container.innerHTML = '';
+        // Add title
+        const title = document.createElement('h2');
+        title.textContent = 'Keywords';
+        title.style.cssText = `
+      margin: 0 0 20px 0;
+      font-size: 18px;
+      color: #333;
+    `;
+        this.container.appendChild(title);
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '×';
+        closeButton.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      border: none;
+      background: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    `;
+        closeButton.onclick = () => this.toggleVisibility();
+        this.container.appendChild(closeButton);
+        // Create keyword list
+        const list = document.createElement('div');
+        list.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    `;
+        // Add keywords
+        keywords.forEach(keyword => {
+            const item = document.createElement('div');
+            item.style.cssText = `
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s;
+      `;
+            const text = document.createElement('div');
+            text.textContent = keyword.text;
+            text.style.cssText = `
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 4px;
+      `;
+            const context = document.createElement('div');
+            context.textContent = keyword.context;
+            context.style.cssText = `
+        font-size: 14px;
+        color: #666;
+        line-height: 1.4;
+      `;
+            item.appendChild(text);
+            item.appendChild(context);
+            list.appendChild(item);
+        });
+        this.container.appendChild(list);
+    }
+    /**
+     * Toggle the visibility of the keyword list
+     */
+    toggleVisibility() {
+        this.isVisible = !this.isVisible;
+        this.container.style.right = this.isVisible ? '0' : '-300px';
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Keyword list visibility:', this.isVisible);
+    }
 }
-function processPDF(url) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            updateDebugInfo('Processing PDF...');
-            // Parse PDF
-            const pdfContent = yield pdfService.parsePDF(url);
-            debug_1.DEBUG.log('PDF parsed successfully', {
-                pages: pdfContent.pages.length,
-                title: pdfContent.title
-            });
-            // Process keywords
-            const keywords = yield keywordService.processDocument(pdfContent.text);
-            debug_1.DEBUG.log('Keywords extracted', keywords);
-            // Highlight keywords
-            keywordService.highlightKeywords(document.body);
-            debug_1.DEBUG.log('Keywords highlighted');
-            updateDebugInfo('PDF processed successfully', {
-                keywords: keywords.length,
-                pages: pdfContent.pages.length
-            });
-        }
-        catch (error) {
-            debug_1.DEBUG.error('PDF processing failed', error);
-            updateDebugInfo('Error processing PDF', { error });
-        }
-    });
-}
-function updateDebugInfo(status, data) {
-    if (!debugPanel)
-        return;
-    debugPanel.innerHTML = `
-    <div style="margin-bottom: 10px;">
-      <strong>Status:</strong> ${status}
-    </div>
-    ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
-  `;
-}
-// Initialize on content script load
-initialize();
 
 
 /***/ }),
@@ -135,56 +122,118 @@ initialize();
 /*!****************************!*\
   !*** ./src/debug/debug.ts ***!
   \****************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEBUG = void 0;
-exports.injectDebugPanel = injectDebugPanel;
-// Debug utilities for PaperPilot extension
-exports.DEBUG = {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   DEBUG: () => (/* binding */ DEBUG),
+/* harmony export */   DebugLevel: () => (/* binding */ DebugLevel),
+/* harmony export */   configure: () => (/* binding */ configure),
+/* harmony export */   debug: () => (/* binding */ debug),
+/* harmony export */   error: () => (/* binding */ error),
+/* harmony export */   info: () => (/* binding */ info),
+/* harmony export */   setEnabled: () => (/* binding */ setEnabled),
+/* harmony export */   setLevel: () => (/* binding */ setLevel),
+/* harmony export */   setPrefix: () => (/* binding */ setPrefix),
+/* harmony export */   trace: () => (/* binding */ trace),
+/* harmony export */   warn: () => (/* binding */ warn)
+/* harmony export */ });
+/**
+ * Debug configuration and utility functions
+ */
+// Debug levels
+var DebugLevel;
+(function (DebugLevel) {
+    DebugLevel[DebugLevel["ERROR"] = 0] = "ERROR";
+    DebugLevel[DebugLevel["WARN"] = 1] = "WARN";
+    DebugLevel[DebugLevel["INFO"] = 2] = "INFO";
+    DebugLevel[DebugLevel["DEBUG"] = 3] = "DEBUG";
+    DebugLevel[DebugLevel["TRACE"] = 4] = "TRACE";
+})(DebugLevel || (DebugLevel = {}));
+// Default configuration
+const config = {
     enabled: true,
-    logLevel: 'debug',
-    log: (message, data) => {
-        if (!exports.DEBUG.enabled)
-            return;
-        console.log(`[PaperPilot] ${message}`, data || '');
-    },
-    error: (message, error) => {
-        if (!exports.DEBUG.enabled)
-            return;
-        console.error(`[PaperPilot Error] ${message}`, error || '');
-    },
-    trace: (message) => {
-        if (!exports.DEBUG.enabled)
-            return;
-        console.trace(`[PaperPilot Trace] ${message}`);
-    }
+    level: DebugLevel.INFO,
+    prefix: '[PaperPilot]'
 };
-// Inject debug panel into page
-function injectDebugPanel() {
-    if (!exports.DEBUG.enabled)
+/**
+ * Log a debug message
+ */
+function debug(...args) {
+    if (!config.enabled || config.level < DebugLevel.DEBUG)
         return;
-    const panel = document.createElement('div');
-    panel.id = 'paperpilot-debug';
-    panel.style.cssText = `
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    width: 300px;
-    height: auto;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 10px;
-    font-family: monospace;
-    font-size: 12px;
-    z-index: 10000;
-    overflow: auto;
-    max-height: 50vh;
-  `;
-    document.body.appendChild(panel);
-    return panel;
+    console.debug(config.prefix, ...args);
 }
+/**
+ * Log an info message
+ */
+function info(...args) {
+    if (!config.enabled || config.level < DebugLevel.INFO)
+        return;
+    console.info(config.prefix, ...args);
+}
+/**
+ * Log a warning message
+ */
+function warn(...args) {
+    if (!config.enabled || config.level < DebugLevel.WARN)
+        return;
+    console.warn(config.prefix, ...args);
+}
+/**
+ * Log an error message
+ */
+function error(...args) {
+    if (!config.enabled || config.level < DebugLevel.ERROR)
+        return;
+    console.error(config.prefix, ...args);
+}
+/**
+ * Log a trace message
+ */
+function trace(...args) {
+    if (!config.enabled || config.level < DebugLevel.TRACE)
+        return;
+    console.trace(config.prefix, ...args);
+}
+/**
+ * Configure debug settings
+ */
+function configure(options) {
+    Object.assign(config, options);
+}
+/**
+ * Enable or disable debugging
+ */
+function setEnabled(enabled) {
+    config.enabled = enabled;
+}
+/**
+ * Set debug level
+ */
+function setLevel(level) {
+    config.level = level;
+}
+/**
+ * Set debug prefix
+ */
+function setPrefix(prefix) {
+    config.prefix = prefix;
+}
+// Export debug configuration
+const DEBUG = {
+    config,
+    debug,
+    info,
+    warn,
+    error,
+    trace,
+    configure,
+    setEnabled,
+    setLevel,
+    setPrefix,
+    DebugLevel
+};
 
 
 /***/ }),
@@ -193,92 +242,167 @@ function injectDebugPanel() {
 /*!****************************************!*\
   !*** ./src/services/KeywordService.ts ***!
   \****************************************/
-/***/ (function(__unused_webpack_module, exports) {
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   KeywordService: () => (/* binding */ KeywordService)
+/* harmony export */ });
+/* harmony import */ var _debug_debug__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../debug/debug */ "./src/debug/debug.ts");
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.KeywordService = void 0;
 class KeywordService {
     constructor(store) {
+        this.stopWords = new Set([
+            'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he',
+            'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'were',
+            'will', 'with', 'this', 'these', 'those', 'such', 'when', 'where', 'which',
+            'who', 'whom', 'whose', 'what', 'why', 'how'
+        ]);
         this.store = store;
     }
-    // Initial processing of paper to find keywords
-    processDocument(paperText) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                // Call LLM to identify keywords and their context
-                const keywords = yield this.extractKeywords(paperText);
-                // Store keywords
-                keywords.forEach(keyword => {
-                    this.store.addKeyword(keyword);
-                });
-                return keywords;
-            }
-            catch (error) {
-                console.error('Error processing document:', error);
-                return [];
-            }
-        });
+    async processDocument(paperText) {
+        try {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Processing document for keywords...');
+            // Extract keywords
+            const keywords = await this.extractKeywords(paperText);
+            // Store keywords
+            keywords.forEach(keyword => {
+                this.store.addKeyword(keyword);
+            });
+            return keywords;
+        }
+        catch (error) {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Error processing document:', error);
+            return [];
+        }
     }
-    // Highlight keywords in the document
     highlightKeywords(container) {
         const keywords = this.store.getKeywords();
-        const textNodes = this.getTextNodes(container);
-        textNodes.forEach(node => {
-            keywords.forEach((keyword) => {
-                const regex = new RegExp(`\\b${keyword.word}\\b`, 'gi');
-                if (regex.test(node.textContent || '')) {
-                    this.wrapKeywordInSVG(node, keyword.word);
+        if (!keywords || keywords.length === 0) {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('No keywords to highlight');
+            return;
+        }
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Highlighting keywords:', keywords);
+        // Create styles for highlights if they don't exist
+        this.ensureHighlightStyles();
+        // Get all text nodes that are direct children of the container
+        // This is specific to PDF.js text layer structure
+        const textElements = Array.from(container.children);
+        textElements.forEach(element => {
+            if (!element.textContent)
+                return;
+            keywords.forEach(keyword => {
+                if (!keyword.text)
+                    return;
+                const regex = new RegExp(`\\b${this.escapeRegExp(keyword.text)}\\b`, 'gi');
+                const text = element.textContent;
+                if (regex.test(text)) {
+                    this.wrapKeywordInHighlight(element, keyword);
                 }
             });
         });
     }
-    getTextNodes(node) {
-        const textNodes = [];
-        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
-        let currentNode;
-        while (currentNode = walker.nextNode()) {
-            textNodes.push(currentNode);
-        }
-        return textNodes;
+    ensureHighlightStyles() {
+        const styleId = 'paperpilot-highlight-styles';
+        if (document.getElementById(styleId))
+            return;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+      .keyword-highlight {
+        background-color: rgba(255, 255, 0, 0.3) !important;
+        border-radius: 3px !important;
+        padding: 0 2px !important;
+        margin: 0 1px !important;
+        position: relative !important;
+        cursor: help !important;
+        display: inline !important;
+      }
+
+      .keyword-highlight:hover {
+        background-color: rgba(255, 255, 0, 0.5) !important;
+      }
+
+      .keyword-highlight:hover::after {
+        content: attr(data-context);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 4px 8px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1000;
+        pointer-events: none;
+      }
+    `;
+        document.head.appendChild(style);
     }
-    wrapKeywordInSVG(textNode, keyword) {
-        var _a, _b;
-        const span = document.createElement('span');
-        span.className = 'keyword-highlight';
-        // Create SVG overlay
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('class', 'keyword-svg');
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('rx', '4');
-        rect.setAttribute('ry', '4');
-        span.appendChild(svg);
-        svg.appendChild(rect);
-        // Replace text with highlighted version
-        const newText = (_a = textNode.textContent) === null || _a === void 0 ? void 0 : _a.replace(new RegExp(`(\\b${keyword}\\b)`, 'gi'), () => span.outerHTML);
-        if (newText) {
-            const newNode = document.createElement('span');
-            newNode.innerHTML = newText;
-            (_b = textNode.parentNode) === null || _b === void 0 ? void 0 : _b.replaceChild(newNode, textNode);
-        }
-    }
-    extractKeywords(text) {
-        return __awaiter(this, void 0, void 0, function* () {
-            console.log('Text to process:', text);
-            return [];
+    wrapKeywordInHighlight(element, keyword) {
+        const text = element.textContent || '';
+        const regex = new RegExp(`\\b${this.escapeRegExp(keyword.text)}\\b`, 'gi');
+        // Create a temporary container
+        const temp = document.createElement('span');
+        temp.innerHTML = text.replace(regex, match => {
+            const highlight = document.createElement('span');
+            highlight.className = 'keyword-highlight';
+            highlight.textContent = match;
+            highlight.dataset.context = keyword.context || keyword.text;
+            highlight.style.cssText = element.style.cssText; // Preserve original styles
+            return highlight.outerHTML;
         });
+        // Copy over the original element's styles and classes
+        temp.style.cssText = element.style.cssText;
+        temp.className = element.className;
+        // Replace the original element
+        element.parentNode?.replaceChild(temp, element);
+    }
+    async extractKeywords(text) {
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Extracting keywords from text');
+        // Split into sentences for context
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        // Get word frequencies
+        const wordFreq = new Map();
+        const wordContexts = new Map();
+        sentences.forEach(sentence => {
+            const words = sentence.toLowerCase()
+                .replace(/[^\w\s]/g, '')
+                .split(/\s+/)
+                .filter(word => word.length > 2 &&
+                !this.stopWords.has(word) &&
+                !/^\d+$/.test(word));
+            words.forEach(word => {
+                wordFreq.set(word, (wordFreq.get(word) || 0) + 1);
+                if (!wordContexts.has(word)) {
+                    wordContexts.set(word, sentence.trim());
+                }
+            });
+        });
+        // Calculate importance scores
+        const totalWords = Array.from(wordFreq.values()).reduce((a, b) => a + b, 0);
+        const keywords = [];
+        wordFreq.forEach((freq, word) => {
+            // TF-IDF-like importance score
+            const importance = (freq / totalWords) * Math.log(1 + freq);
+            keywords.push({
+                text: word,
+                importance,
+                context: wordContexts.get(word) || ''
+            });
+        });
+        // Sort by importance and take top 20
+        keywords.sort((a, b) => b.importance - a.importance);
+        const topKeywords = keywords.slice(0, 20);
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_0__.debug)('Extracted keywords:', topKeywords);
+        return topKeywords;
+    }
+    escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 }
-exports.KeywordService = KeywordService;
 
 
 /***/ }),
@@ -287,139 +411,161 @@ exports.KeywordService = KeywordService;
 /*!************************************!*\
   !*** ./src/services/PDFService.ts ***!
   \************************************/
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   PDFService: () => (/* binding */ PDFService)
+/* harmony export */ });
+/* harmony import */ var pdfjs_dist__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! pdfjs-dist */ "./node_modules/pdfjs-dist/build/pdf.mjs");
+/* harmony import */ var _debug_debug__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../debug/debug */ "./src/debug/debug.ts");
 
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PDFService = void 0;
-const debug_1 = __webpack_require__(/*! ../debug/debug */ "./src/debug/debug.ts");
-const pdf_config_1 = __webpack_require__(/*! ../config/pdf.config */ "./src/config/pdf.config.ts");
 class PDFService {
     constructor() {
         this.initialized = false;
+        this.document = null;
         // Don't initialize in constructor - wait for init() call
     }
-    init(workerUrl) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.initialized) {
-                return;
+    async init(workerUrl) {
+        if (this.initialized) {
+            return;
+        }
+        try {
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Initializing PDF.js worker with URL:', workerUrl);
+            // Ensure worker URL is valid
+            if (!workerUrl) {
+                throw new Error('Worker URL is required');
             }
-            if (typeof window !== 'undefined' && 'Worker' in window) {
+            // Set worker source
+            pdfjs_dist__WEBPACK_IMPORTED_MODULE_0__.GlobalWorkerOptions.workerSrc = workerUrl;
+            // Test worker initialization
+            const testPdf = new Uint8Array([
+                0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a
+            ]); // Empty PDF header
+            try {
+                await pdfjs_dist__WEBPACK_IMPORTED_MODULE_0__.getDocument({ data: testPdf }).promise;
+                _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('PDF.js worker test successful');
+            }
+            catch (error) {
+                if (error.name === 'InvalidPDFException') {
+                    // This is actually good - means worker is working but PDF is invalid
+                    _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('PDF.js worker initialized successfully');
+                }
+                else {
+                    throw error;
+                }
+            }
+            this.initialized = true;
+        }
+        catch (error) {
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.error('Failed to initialize PDF.js worker:', error);
+            throw error;
+        }
+    }
+    async parsePDF(url) {
+        if (!this.initialized) {
+            throw new Error('PDFService not initialized. Call init() first.');
+        }
+        try {
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Starting PDF parse:', url);
+            let pdfData = url;
+            // Handle local files
+            if (url.startsWith('file://')) {
                 try {
-                    debug_1.DEBUG.log('Initializing PDF.js worker with URL:', workerUrl);
-                    const success = (0, pdf_config_1.initializePDFJS)(workerUrl);
-                    if (!success) {
-                        throw new Error('Failed to initialize PDF.js worker options');
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    this.initialized = true;
+                    pdfData = await response.arrayBuffer();
+                    _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Successfully loaded local PDF file');
                 }
                 catch (error) {
-                    debug_1.DEBUG.error('Failed to initialize PDF.js worker:', error);
-                    throw new Error('Failed to initialize PDF.js worker');
+                    _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.error('Error loading local PDF:', error);
+                    throw new Error(`Unable to load local PDF file: ${error.message}`);
                 }
+            }
+            // Load the PDF document with improved options
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Creating PDF document with options');
+            const loadingTask = pdfjs_dist__WEBPACK_IMPORTED_MODULE_0__.getDocument({
+                url: pdfData,
+                cMapUrl: chrome.runtime.getURL('cmaps/'),
+                cMapPacked: true,
+                standardFontDataUrl: chrome.runtime.getURL('standard_fonts/'),
+            });
+            this.document = await loadingTask.promise;
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('PDF document loaded successfully, pages:', this.document.numPages);
+            // Get document metadata
+            const metadata = await this.document.getMetadata();
+            const info = metadata.info;
+            // Extract text from each page
+            const pages = [];
+            let fullText = '';
+            for (let i = 1; i <= this.document.numPages; i++) {
+                const page = await this.document.getPage(i);
+                const textContent = await page.getTextContent();
+                // Extract text items and their positions
+                const items = textContent.items;
+                const pageText = items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+                pages.push({
+                    pageNumber: i,
+                    content: pageText,
+                    items: items
+                });
+                // Clean up page object
+                page.cleanup();
+            }
+            return {
+                text: fullText,
+                pages: pages,
+                title: info?.Title,
+                metadata: info
+            };
+        }
+        catch (error) {
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.error('PDF parsing error:', error);
+            throw error;
+        }
+    }
+    /**
+     * Extract text content from a PDF file
+     */
+    async extractText(url) {
+        try {
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Loading PDF:', url);
+            // Load the PDF document
+            const loadingTask = pdfjs_dist__WEBPACK_IMPORTED_MODULE_0__.getDocument(url);
+            const pdf = await loadingTask.promise;
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('PDF loaded, extracting text...');
+            // Get all pages
+            const pages = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items
+                    .map(item => 'str' in item ? item.str : '')
+                    .join(' ');
+                pages.push(pageText);
+            }
+            // Get metadata
+            const metadata = await pdf.getMetadata();
+            const title = metadata.info?.Title || 'Untitled PDF';
+            _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('PDF text extracted successfully');
+            // Return combined text
+            return pages.join('\n');
+        }
+        catch (error) {
+            if (error instanceof Error) {
+                _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Error extracting PDF text:', error.message);
             }
             else {
-                throw new Error('Web Workers not supported in this environment');
+                _debug_debug__WEBPACK_IMPORTED_MODULE_1__.DEBUG.log('Unknown error extracting PDF text');
             }
-        });
-    }
-    parsePDF(url) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this.initialized) {
-                throw new Error('PDFService not initialized. Call init() first.');
-            }
-            try {
-                debug_1.DEBUG.log('Starting PDF parse:', url);
-                // Load the PDF document using the correct import
-                this.document = yield (0, pdf_config_1.getDocument)(url).promise;
-                debug_1.DEBUG.log('PDF document loaded, pages:', this.document.numPages);
-                // Get document metadata with proper typing
-                const metadata = yield this.document.getMetadata();
-                const info = metadata.info;
-                // Extract text from each page
-                const pages = [];
-                let fullText = '';
-                for (let i = 1; i <= this.document.numPages; i++) {
-                    const page = yield this.document.getPage(i);
-                    const textContent = yield page.getTextContent();
-                    // Extract text items and their positions
-                    const items = textContent.items;
-                    const pageText = items.map(item => item.str).join(' ');
-                    fullText += pageText + '\n';
-                    pages.push({
-                        pageNumber: i,
-                        content: pageText,
-                        items: items
-                    });
-                }
-                return {
-                    text: fullText,
-                    pages: pages,
-                    title: info === null || info === void 0 ? void 0 : info.Title,
-                    metadata: info
-                };
-            }
-            catch (error) {
-                debug_1.DEBUG.error('PDF parsing error:', error);
-                throw error;
-            }
-        });
-    }
-    getTextCoordinates(pdfUrl, searchText) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const locations = [];
-            try {
-                const doc = yield (0, pdf_config_1.getDocument)(pdfUrl).promise;
-                for (let i = 1; i <= doc.numPages; i++) {
-                    const page = yield doc.getPage(i);
-                    const textContent = yield page.getTextContent();
-                    const viewport = page.getViewport({ scale: 1.0 });
-                    // Find text matches and their coordinates
-                    const items = textContent.items;
-                    items.forEach((item) => {
-                        if (item.str.includes(searchText)) {
-                            const transform = viewport.transform;
-                            const [x, y] = this.applyTransform([item.transform[4], item.transform[5]], transform);
-                            locations.push({
-                                pageNumber: i,
-                                text: item.str,
-                                x: x,
-                                y: y,
-                                width: item.width,
-                                height: item.height
-                            });
-                        }
-                    });
-                }
-            }
-            catch (error) {
-                console.error('Error getting text coordinates:', error);
-            }
-            return locations;
-        });
-    }
-    applyTransform(point, transform) {
-        const x = transform[0] * point[0] + transform[2] * point[1] + transform[4];
-        const y = transform[1] * point[0] + transform[3] * point[1] + transform[5];
-        return [x, y];
-    }
-    destroy() {
-        if (this.document) {
-            this.document.destroy();
-            this.document = undefined;
+            throw error;
         }
     }
 }
-exports.PDFService = PDFService;
 // Usage example in content script:
 /*
 const pdfService = new PDFService();
@@ -445,32 +591,47 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 /*!***********************************!*\
   !*** ./src/store/KeywordStore.ts ***!
   \***********************************/
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.KeywordStore = void 0;
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   KeywordStore: () => (/* binding */ KeywordStore)
+/* harmony export */ });
 class KeywordStore {
     constructor() {
         this.keywords = new Map();
     }
     addKeyword(keyword) {
-        this.keywords.set(keyword.word, keyword);
+        if (!keyword.word)
+            return;
+        this.keywords.set(keyword.word.toLowerCase(), keyword);
     }
     getKeyword(word) {
-        return this.keywords.get(word);
+        return this.keywords.get(word.toLowerCase());
     }
     getKeywords() {
-        return Array.from(this.keywords.values());
+        return Array.from(this.keywords.values())
+            .sort((a, b) => b.importance - a.importance);
     }
     updateKeywordData(word, data) {
-        const existing = this.keywords.get(word);
+        const existing = this.keywords.get(word.toLowerCase());
         if (existing) {
-            this.keywords.set(word, Object.assign(Object.assign({}, existing), data));
+            this.keywords.set(word.toLowerCase(), {
+                ...existing,
+                ...data
+            });
         }
     }
+    clear() {
+        this.keywords.clear();
+    }
+    size() {
+        return this.keywords.size;
+    }
+    hasKeyword(word) {
+        return this.keywords.has(word.toLowerCase());
+    }
 }
-exports.KeywordStore = KeywordStore;
 
 
 /***/ }),
@@ -21076,7 +21237,7 @@ var __webpack_exports__version = __nested_webpack_exports__.version;
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -21112,12 +21273,121 @@ var __webpack_exports__version = __nested_webpack_exports__.version;
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-/******/ 	
-/******/ 	// startup
-/******/ 	// Load entry module and return exports
-/******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __webpack_exports__ = __webpack_require__("./src/content.ts");
-/******/ 	
+var __webpack_exports__ = {};
+// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
+(() => {
+/*!************************!*\
+  !*** ./src/content.ts ***!
+  \************************/
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _services_PDFService__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./services/PDFService */ "./src/services/PDFService.ts");
+/* harmony import */ var _services_KeywordService__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./services/KeywordService */ "./src/services/KeywordService.ts");
+/* harmony import */ var _store_KeywordStore__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./store/KeywordStore */ "./src/store/KeywordStore.ts");
+/* harmony import */ var _components_KeywordList__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./components/KeywordList */ "./src/components/KeywordList.ts");
+/* harmony import */ var _debug_debug__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./debug/debug */ "./src/debug/debug.ts");
+/// <reference types="chrome"/>
+
+
+
+
+
+// Initialize services
+const pdfService = new _services_PDFService__WEBPACK_IMPORTED_MODULE_0__.PDFService();
+const keywordService = new _services_KeywordService__WEBPACK_IMPORTED_MODULE_1__.KeywordService();
+const keywordStore = new _store_KeywordStore__WEBPACK_IMPORTED_MODULE_2__.KeywordStore();
+const keywordList = new _components_KeywordList__WEBPACK_IMPORTED_MODULE_3__.KeywordList();
+// Debug panel element
+let debugPanel = null;
+// Function to create and append debug panel
+function createDebugPanel() {
+    if (debugPanel)
+        return;
+    debugPanel = document.createElement('div');
+    debugPanel.id = 'paperpilot-debug-panel';
+    debugPanel.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    z-index: 9999;
+  `;
+    const toggleButton = document.createElement('button');
+    toggleButton.textContent = 'Show Keywords';
+    toggleButton.onclick = () => {
+        keywordList.toggleVisibility();
+    };
+    debugPanel.appendChild(toggleButton);
+    document.body.appendChild(debugPanel);
+}
+// Process PDF and extract keywords
+async function processPDF(url) {
+    try {
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Processing PDF:', url);
+        // Extract text from PDF
+        const text = await pdfService.extractText(url);
+        if (!text) {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('No text extracted from PDF');
+            return;
+        }
+        // Extract keywords
+        const keywords = await keywordService.extractKeywords(text);
+        if (!keywords || keywords.length === 0) {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('No keywords extracted');
+            return;
+        }
+        // Store keywords
+        keywordStore.setKeywords(keywords);
+        // Update UI
+        keywordList.updateKeywords(keywords);
+        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Keywords extracted:', keywords);
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Error processing PDF:', error.message);
+        }
+        else {
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Unknown error processing PDF');
+        }
+    }
+}
+// Listen for messages from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Received message:', message);
+    switch (message.type) {
+        case 'PING':
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Received PING');
+            sendResponse({ status: 'alive' });
+            break;
+        case 'PDF_LOADED':
+            if (message.url) {
+                (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('PDF loaded:', message.url);
+                createDebugPanel();
+                processPDF(message.url).catch((error) => {
+                    if (error instanceof Error) {
+                        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Error in PDF_LOADED handler:', error.message);
+                    }
+                    else {
+                        (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Unknown error in PDF_LOADED handler');
+                    }
+                });
+            }
+            break;
+        case 'TOGGLE_KEYWORDS':
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Toggling keywords panel');
+            keywordList.toggleVisibility();
+            break;
+        default:
+            (0,_debug_debug__WEBPACK_IMPORTED_MODULE_4__.debug)('Unknown message type:', message.type);
+    }
+    // Return true to indicate async response
+    return true;
+});
+
+})();
+
 /******/ })()
 ;
 //# sourceMappingURL=content.js.map

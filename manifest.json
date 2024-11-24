@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
   "name": "PaperPilot",
-  "version": "1.0",
-  "description": "Interactive paper reading assistant with keyword context and visualization",
+  "version": "0.1.0",
+  "description": "Intelligent PDF analysis and keyword extraction",
   "permissions": [
     "activeTab",
     "scripting",
-    "webNavigation"
+    "webNavigation",
+    "tabs"
   ],
   "host_permissions": [
-    "*://*/*.pdf"
+    "*://*/*",
+    "file://*/*"
   ],
   "action": {
     "default_icon": {
@@ -18,20 +20,26 @@
       "128": "icons/icon128.png"
     }
   },
-  "content_scripts": [
-    {
-      "matches": ["*://*/*.pdf"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
-    }
-  ],
-  "background": {
-    "service_worker": "background.js"
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["pdf.worker.min.js"],
-      "matches": ["<all_urls>"]
-    }
-  ]
-} 
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "web_accessible_resources": [{
+    "resources": [
+      "pdf.worker.min.js",
+      "cmaps/*",
+      "standard_fonts/*"
+    ],
+    "matches": ["<all_urls>"]
+  }],
+  "content_scripts": [{
+    "matches": ["*://*/*", "file://*/*"],
+    "js": ["content.js"],
+    "css": ["styles.css"]
+  }]
+}

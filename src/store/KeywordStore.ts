@@ -1,3 +1,5 @@
+import { Keyword } from '../services/KeywordService';
+
 export interface KeywordData {
   word: string;
   contextDescription: string;
@@ -8,24 +10,45 @@ export interface KeywordData {
 }
 
 export class KeywordStore {
-  private keywords: Map<string, KeywordData> = new Map();
+  private keywords: Map<string, Keyword>;
 
-  addKeyword(keyword: KeywordData) {
-    this.keywords.set(keyword.word, keyword);
+  constructor() {
+    this.keywords = new Map();
   }
 
-  getKeyword(word: string): KeywordData | undefined {
-    return this.keywords.get(word);
+  addKeyword(keyword: Keyword): void {
+    if (!keyword.word) return;
+    this.keywords.set(keyword.word.toLowerCase(), keyword);
   }
 
-  getKeywords(): KeywordData[] {
-    return Array.from(this.keywords.values());
+  getKeyword(word: string): Keyword | undefined {
+    return this.keywords.get(word.toLowerCase());
   }
 
-  updateKeywordData(word: string, data: Partial<KeywordData>) {
-    const existing = this.keywords.get(word);
+  getKeywords(): Keyword[] {
+    return Array.from(this.keywords.values())
+      .sort((a, b) => b.importance - a.importance);
+  }
+
+  updateKeywordData(word: string, data: Partial<Keyword>): void {
+    const existing = this.keywords.get(word.toLowerCase());
     if (existing) {
-      this.keywords.set(word, { ...existing, ...data });
+      this.keywords.set(word.toLowerCase(), {
+        ...existing,
+        ...data
+      });
     }
   }
-} 
+
+  clear(): void {
+    this.keywords.clear();
+  }
+
+  size(): number {
+    return this.keywords.size;
+  }
+
+  hasKeyword(word: string): boolean {
+    return this.keywords.has(word.toLowerCase());
+  }
+}

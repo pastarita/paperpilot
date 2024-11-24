@@ -8,7 +8,8 @@ export async function getWhereAreWe(keyword: string, paperContext: string): Prom
     - Include maximum 3 levels
     - Include Wikipedia links for each node
     - Follow this format:
-    
+    - Generate superset categorical containers if need be
+
     graph TD
       A[Main Field] --> B[Subfield]
       B --> C[Specific Area]
